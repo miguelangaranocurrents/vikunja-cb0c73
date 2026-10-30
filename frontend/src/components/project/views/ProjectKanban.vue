@@ -798,19 +798,39 @@ function dragstart(bucket: BucketResponse) {
 	sourceBucket.value = bucket.id
 }
 
-// Scroll the board on dragover near its edges. Sortable's own autoscroll did not move the board for a pointer this close to the edge.
+// Scroll the board every frame while a drag rests near its left or right edge. Sortable's own autoscroll did not move the board for a pointer this close to the edge.
+let edgeScroll: {board: HTMLElement, clientX: number} | null = null
+let edgeScrollFrame = 0
+
 function scrollBoardNearEdge(e: DragEvent) {
 	if (!drag.value && !dragBucket.value) {
 		return
 	}
 
-	const board = e.currentTarget as HTMLElement
-	const rect = board.getBoundingClientRect()
-	if (e.clientX > rect.right - BOARD_EDGE_SCROLL_ZONE) {
-		board.scrollLeft += BOARD_EDGE_SCROLL_STEP
-	} else if (e.clientX < rect.left + BOARD_EDGE_SCROLL_ZONE) {
-		board.scrollLeft -= BOARD_EDGE_SCROLL_STEP
+	edgeScroll = {board: e.currentTarget as HTMLElement, clientX: e.clientX}
+	if (edgeScrollFrame === 0) {
+		edgeScrollFrame = requestAnimationFrame(stepBoardEdgeScroll)
 	}
+}
+
+function stepBoardEdgeScroll() {
+	edgeScrollFrame = 0
+	if (edgeScroll === null || (!drag.value && !dragBucket.value)) {
+		edgeScroll = null
+		return
+	}
+
+	const {board, clientX} = edgeScroll
+	const rect = board.getBoundingClientRect()
+	if (clientX > rect.right - BOARD_EDGE_SCROLL_ZONE) {
+		board.scrollLeft += BOARD_EDGE_SCROLL_STEP
+	} else if (clientX < rect.left + BOARD_EDGE_SCROLL_ZONE) {
+		board.scrollLeft -= BOARD_EDGE_SCROLL_STEP
+	} else {
+		return
+	}
+
+	edgeScrollFrame = requestAnimationFrame(stepBoardEdgeScroll)
 }
 
 function handleTaskDragStart(e: SortableEvent) {
