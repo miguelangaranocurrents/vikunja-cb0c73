@@ -22,7 +22,6 @@
 				<div
 					:class="{ 'is-loading': showInitialLoading, 'is-dragging': drag || dragBucket }"
 					class="kanban kanban-bucket-container loader-container"
-					@dragover="scrollBoardNearEdge"
 				>
 					<BucketDraggable
 						v-bind="DRAG_OPTIONS"
@@ -356,10 +355,6 @@ const DRAG_OPTIONS = {
 	delayOnTouchOnly: true,
 	delay: 1000,
 } as const
-
-// Distance in px from the board's left or right edge within which a drag scrolls the board, and how far each dragover moves it.
-const BOARD_EDGE_SCROLL_ZONE = 80
-const BOARD_EDGE_SCROLL_STEP = 20
 
 const MIN_SCROLL_HEIGHT_PERCENT = 0.25
 
@@ -796,41 +791,6 @@ function shouldAcceptDrop(bucket: BucketResponse) {
 function dragstart(bucket: BucketResponse) {
 	drag.value = true
 	sourceBucket.value = bucket.id
-}
-
-// Scroll the board every frame while a drag rests near its left or right edge. Sortable's own autoscroll did not move the board for a pointer this close to the edge.
-let edgeScroll: {board: HTMLElement, clientX: number} | null = null
-let edgeScrollFrame = 0
-
-function scrollBoardNearEdge(e: DragEvent) {
-	if (!drag.value && !dragBucket.value) {
-		return
-	}
-
-	edgeScroll = {board: e.currentTarget as HTMLElement, clientX: e.clientX}
-	if (edgeScrollFrame === 0) {
-		edgeScrollFrame = requestAnimationFrame(stepBoardEdgeScroll)
-	}
-}
-
-function stepBoardEdgeScroll() {
-	edgeScrollFrame = 0
-	if (edgeScroll === null || (!drag.value && !dragBucket.value)) {
-		edgeScroll = null
-		return
-	}
-
-	const {board, clientX} = edgeScroll
-	const rect = board.getBoundingClientRect()
-	if (clientX > rect.right - BOARD_EDGE_SCROLL_ZONE) {
-		board.scrollLeft += BOARD_EDGE_SCROLL_STEP
-	} else if (clientX < rect.left + BOARD_EDGE_SCROLL_ZONE) {
-		board.scrollLeft -= BOARD_EDGE_SCROLL_STEP
-	} else {
-		return
-	}
-
-	edgeScrollFrame = requestAnimationFrame(stepBoardEdgeScroll)
 }
 
 function handleTaskDragStart(e: SortableEvent) {
